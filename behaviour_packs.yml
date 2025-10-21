@@ -37,3 +37,19 @@ jobs:
           ls -la extracted/behavior_packs || true
 
       - name: Commit extracted files to extracted-behavior-packs
+      if: always() && steps.verify.outputs.FOUND == '1'
+        env:
+          BRANCH_NAME: extracted-behavior-packs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # create or checkout the branch
+          if git show-ref --verify --quiet refs/heads/${BRANCH_NAME}; then
+            git checkout ${BRANCH_NAME}
+          else
+            git checkout -b ${BRANCH_NAME}
+          fi
+          git add extracted
+          git commit -m "Add extracted behavior_packs contents" || echo "No changes to commit"
+          git push --set-upstream origin ${BRANCH_NAME}
+          
