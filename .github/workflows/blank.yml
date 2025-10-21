@@ -1,0 +1,55 @@
+name: Extract behavior_packs.zip
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Ensure unzip is available
+        run: sudo apt-get update && sudo apt-get install -y unzip
+
+      - name: Verify behavior_packs.zip exists at repo root
+        run: |
+          if [ -f "behavior_packs.zip" ]; then
+            echo "FOUND=1" >> $GITHUB_OUTPUT
+            ls -lh behavior_packs.zip
+          else
+            echo "FOUND=0" >> $GITHUB_OUTPUT
+            echo "behavior_packs.zip not found at repository root" >&2
+            exit 1
+          fi
+
+      - name: Unzip behavior_packs.zip
+        if: always() && steps.verify.outputs.FOUND == '1'
+        run: |
+          mkdir -p extracted/behavior_packs
+          unzip -o "behavior_packs.zip" -d extracted/behavior_packs
+          echo "Extracted to extracted/behavior_packs"
+          echo "Contents:"
+          ls -la extracted/behavior_packs || true
+
+      - name: Commit extracted files to extracted-behavior-packs
+      if: always() && steps.verify.outputs.FOUND == '1'
+        env:
+          BRANCH_NAME: extracted-behavior-packs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # create or checkout the branch
+          if git show-ref --verify --quiet refs/heads/${BRANCH_NAME}; then
+            git checkout ${BRANCH_NAME}
+          else
+            git checkout -b ${BRANCH_NAME}
+          fi
+          git add extracted
+          git commit -m "Add extracted behavior_packs contents" || echo "No changes to commit"
+          git push --set-upstream origin ${BRANCH_NAME}
+          
