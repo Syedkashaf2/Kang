@@ -1,0 +1,39 @@
+name: Extract behavior_packs.zip
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Ensure unzip is available
+        run: sudo apt-get update && sudo apt-get install -y unzip
+
+      - name: Verify behavior_packs.zip exists at repo root
+        run: |
+          if [ -f "behavior_packs.zip" ]; then
+            echo "FOUND=1" >> $GITHUB_OUTPUT
+            ls -lh behavior_packs.zip
+          else
+            echo "FOUND=0" >> $GITHUB_OUTPUT
+            echo "behavior_packs.zip not found at repository root" >&2
+            exit 1
+          fi
+
+      - name: Unzip behavior_packs.zip
+        if: always() && steps.verify.outputs.FOUND == '1'
+        run: |
+          mkdir -p extracted/behavior_packs
+          unzip -o "behavior_packs.zip" -d extracted/behavior_packs
+          echo "Extracted to extracted/behavior_packs"
+          echo "Contents:"
+          ls -la extracted/behavior_packs || true
+
+      - name: Commit extracted files to extracted-behavior-packs
